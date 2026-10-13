@@ -19,7 +19,7 @@ pub fn start(ring: u64, capacity: u32) {
         .name("audio".into())
         .spawn(move || match play(ring, capacity) {
             Ok(stream) => {
-                eprintln!("[audio] CoreAudio output started (ring 0x{ring:x}, {capacity} frames)");
+                eprintln!("[audio] audio output started (ring 0x{ring:x}, {capacity} frames)");
                 let _keep = stream;
                 loop { std::thread::park(); }
             }

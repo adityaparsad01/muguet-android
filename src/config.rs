@@ -28,9 +28,15 @@ const DEFAULT_CONFIG: &str = r#"{
 "#;
 
 fn support_dir() -> PathBuf {
+    if let Some(dir) = std::env::var_os("MUGUET_HOME") {
+        return PathBuf::from(dir);
+    }
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
     if cfg!(target_os = "ios") {
         return PathBuf::from(home).join("Documents");
+    }
+    if cfg!(target_os = "android") {
+        return PathBuf::from(home).join("files/Muguet");
     }
     PathBuf::from(home).join("Library/Application Support/Muguet")
 }
@@ -100,9 +106,9 @@ pub fn setup() -> anyhow::Result<Startup> {
 
     set_default("MUGUET_FSROOT", support.join("saves"));
     let build = locate();
-    #[cfg(not(target_os = "ios"))]
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
     let build = build?;
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "ios", target_os = "android"))]
     let build = build.unwrap_or_default();
     Ok(Startup { wasm_path: build.join("game.wasm"), cache_dir: support, engine_args })
 }

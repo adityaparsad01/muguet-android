@@ -18,3 +18,11 @@ DerivedData/
 /game/
 /gamedat/
 /mirror/
+
+# Android port build products
+/android/.gradle/
+/android/app/build/
+/android/app/src/main/jniLibs/
+/build/Muguet-Android-*.apk
+
+/android/build/

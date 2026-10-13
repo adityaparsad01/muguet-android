@@ -65,7 +65,12 @@ impl ApplicationHandler for App {
             window.set_fullscreen(Some(Fullscreen::Borderless(None)));
         }
         let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-        desc.backends = wgpu::Backends::METAL;
+        #[cfg(target_os = "android")]
+        { desc.backends = wgpu::Backends::VULKAN; }
+        #[cfg(any(target_os = "ios", target_os = "macos"))]
+        { desc.backends = wgpu::Backends::METAL; }
+        #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+        { desc.backends = wgpu::Backends::VULKAN | wgpu::Backends::GL; }
         let instance = wgpu::Instance::new(desc);
         let surface = instance.create_surface(window.clone()).expect("create surface");
         *gpu::SURFACE.lock().unwrap() = Some(gpu::SurfaceHandoff { instance, surface, window: window.clone() });
@@ -86,6 +91,8 @@ impl ApplicationHandler for App {
         input::set_focus(false);
         #[cfg(target_os = "ios")]
         crate::touch::release();
+        #[cfg(target_os = "android")]
+        crate::touch_android::release();
     }
 
     fn window_event(&mut self, _el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -147,6 +154,8 @@ impl ApplicationHandler for App {
             }
             #[cfg(target_os = "ios")]
             WindowEvent::Touch(t) => crate::touch::touch(&t),
+            #[cfg(target_os = "android")]
+            WindowEvent::Touch(t) => crate::touch_android::touch(&t, window.inner_size()),
             WindowEvent::MouseWheel { delta, .. } => {
                 self.wheel_accum += match delta { MouseScrollDelta::LineDelta(_, y) => y as f64 / 3.0 * 3.0, MouseScrollDelta::PixelDelta(p) => p.y / 100.0 };
                 let n = self.wheel_accum.trunc();
@@ -265,10 +274,22 @@ impl App {
     }
 }
 
-pub fn run(rt: Option<Arc<Runtime>>, startup: crate::config::Startup, args: Vec<String>) -> anyhow::Result<()> {
-    let event_loop = EventLoop::new()?;
+fn run_on_event_loop(event_loop: EventLoop<()>, rt: Option<Arc<Runtime>>, startup: crate::config::Startup, args: Vec<String>) -> anyhow::Result<()> {
     event_loop.set_control_flow(ControlFlow::Wait);
     let mut app = App { mode_chosen: false, rt, startup, args, window: None, started: false, launcher_shown: false, locked: false, mods: ModifiersState::empty(), wheel_accum: 0.0 };
     event_loop.run_app(&mut app)?;
     Ok(())
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn run(rt: Option<Arc<Runtime>>, startup: crate::config::Startup, args: Vec<String>) -> anyhow::Result<()> {
+    run_on_event_loop(EventLoop::new()?, rt, startup, args)
+}
+
+#[cfg(target_os = "android")]
+pub fn run_android(rt: Option<Arc<Runtime>>, startup: crate::config::Startup, args: Vec<String>, android_app: winit::platform::android::activity::AndroidApp) -> anyhow::Result<()> {
+    use winit::platform::android::EventLoopBuilderExtAndroid;
+    let mut builder = EventLoop::builder();
+    builder.with_android_app(android_app);
+    run_on_event_loop(builder.build()?, rt, startup, args)
 }
