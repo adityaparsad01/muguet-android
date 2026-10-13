@@ -1,6 +1,8 @@
 # Muguet
 A native Mach-O iOS/macOS port of GTA V, with multiplayer
 
+> **Educational / research project:** Muguet is intended for educational, research, and interoperability purposes. It does not include or distribute GTA V game assets. Users must provide their own legally obtained game files and are responsible for complying with all applicable laws, licences, and third-party terms.
+
 ## How does this work ?
 this whole port relies on the WebAssembly compilation of the game. in a browser, that `game.wasm` runs inside the JS engine, behind WebGPU, Web Audio, web workers...
 Muguet throws that layer away and runs the same `game.wasm` as a regular native app, with [wasmtime](https://wasmtime.dev) for the code and [wgpu](https://wgpu.rs) on Metal for the graphics
